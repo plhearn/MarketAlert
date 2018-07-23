@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Net;
 using System.Net.Http;
+using System.IO;
 using Newtonsoft.Json;
 
 namespace MarketAlert
@@ -129,7 +130,7 @@ namespace MarketAlert
 
             if (pct > alertThreshold / 100m)
             {
-                System.Media.SoundPlayer player = new System.Media.SoundPlayer(@"beep-high.wav");
+                System.Media.SoundPlayer player = new System.Media.SoundPlayer(@"audio/beep-high.wav");
                 player.Play();
                 coinData.Clear();
 
@@ -139,7 +140,7 @@ namespace MarketAlert
 
             if (pct < -alertThreshold / 100m)
             {
-                System.Media.SoundPlayer player = new System.Media.SoundPlayer(@"beep-low.wav");
+                System.Media.SoundPlayer player = new System.Media.SoundPlayer(@"audio/beep-low.wav");
                 player.Play();
                 coinData.Clear();
 
