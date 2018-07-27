@@ -21,7 +21,11 @@ namespace MarketAlert
         public int interval = 10000;
         public decimal alertThreshold = 0.05m;
         public int minutes = 5;
+
         string strDebug = "";
+        bool statusLogEnabled = true;
+        bool fileLogEnabled = true;
+        
 
         public class BinanceCoin
         {
@@ -44,6 +48,9 @@ namespace MarketAlert
         {
             InitializeComponent();
             lblDebug.Text = "";
+            lblMessage.Text = "";
+            button1.Focus();
+            this.Text = "Coin Alert";
         }
 
 
@@ -62,9 +69,6 @@ namespace MarketAlert
                 timer1.Stop();
                 timer1 = null;
                 button1.Text = "Start";
-
-                //timerTrades.Stop();
-                //timerTrades = null;
             }
         }
 
@@ -84,8 +88,6 @@ namespace MarketAlert
 
             getHttpBinance();
 
-            bool found = false;
-
             decimal curPrice = 0;
 
             if (coinData.Count > 0)
@@ -93,6 +95,8 @@ namespace MarketAlert
             
             decimal startPrice = curPrice;
             DateTime startTime = DateTime.Now;
+            
+            bool found = false;
 
             for (int i=coinData.Count-1; i>=0; i--)
             {
@@ -110,69 +114,95 @@ namespace MarketAlert
             }
 
 
-            decimal pct = 0;
+            decimal percentChange = 0;
                 
             if(startPrice > 0)
-                pct = (curPrice - startPrice) / startPrice;
+                percentChange = (curPrice - startPrice) / startPrice;
 
-            lblMessage.Text = "pct change over " + minutes.ToString() + " minutes: " + (pct * 100);
+            lblMessage.Text = "percent change over " + minutes.ToString() + " minutes: " + (percentChange * 100);
 
             /*
             strDebug = "";
 
             for (int i = coinData.Count - 1; i >= 0; i--)
-            {
                 strDebug += coinData[i].price.ToString() + "\n";
-            }
 
             lblDebug.Text = strDebug;
             */
 
-            if (pct > alertThreshold / 100m)
+            if (percentChange > alertThreshold / 100m)
             {
                 System.Media.SoundPlayer player = new System.Media.SoundPlayer(@"audio/beep-high.wav");
                 player.Play();
                 coinData.Clear();
 
-                strDebug += "Alert at " + DateTime.Now.ToString() + " for " + alertThreshold + " pct change within " + minutes + " minutes.\n";
-                strDebug += "  Price went from " + startPrice + " at " + startTime.ToString() + " to " + curPrice + " at " + DateTime.Now.ToString() + ".\n\n";
+                logStatus("\nPrice up at " + DateTime.Now.ToString() + ".  " + alertThreshold + " percent change within " + minutes + " minutes.\n\n");
+                logStatus("from " + Math.Round(startPrice) + " at " + startTime.ToString() + " \nto     " + Math.Round(curPrice) + " at " + DateTime.Now.ToString() + ".\n\n");
             }
 
-            if (pct < -alertThreshold / 100m)
+            if (percentChange < -alertThreshold / 100m)
             {
                 System.Media.SoundPlayer player = new System.Media.SoundPlayer(@"audio/beep-low.wav");
                 player.Play();
                 coinData.Clear();
 
-                strDebug += "Alert at " + DateTime.Now.ToString() + " for " + alertThreshold + " pct change within " + minutes + " minutes.\n";
-                strDebug += "  Price went from " + startPrice + " at " + startTime.ToString() + " to " + curPrice + " at " + DateTime.Now.ToString() + ".\n\n";
+                logStatus("\nPrice down at " + DateTime.Now.ToString() + ".  " + alertThreshold + " percent change within " + minutes + " minutes.\n\n");
+                logStatus("from " + Math.Round(startPrice) + " at " + startTime.ToString() + " \nto     " + Math.Round(curPrice) + " at " + DateTime.Now.ToString() + ".\n\n");
             }
-
-            lblDebug.Text = strDebug;
         }
 
 
         public async void getHttpBinance()
         {
-            string strData = await client.GetStringAsync("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT");
-
-            //List<BinanceCoin> coins = JsonConvert.DeserializeObject<List<BinanceCoin>>(strData);
-            BinanceCoin coin = JsonConvert.DeserializeObject<BinanceCoin>(strData);
-            
-            if (coin.symbol.Contains("BTC"))
+            try
             {
-                BinanceCoinData bcd = new BinanceCoinData();
-                bcd.price = coin.price;
-                bcd.symbol = coin.symbol;
-                bcd.tstamp = DateTime.Now;
+                string strData = await client.GetStringAsync("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT");
 
-                coinData.Add(bcd);
+                //List<BinanceCoin> coins = JsonConvert.DeserializeObject<List<BinanceCoin>>(strData);
+                BinanceCoin coin = JsonConvert.DeserializeObject<BinanceCoin>(strData);
+
+                if (coin.symbol.Contains("BTC"))
+                {
+                    BinanceCoinData bcd = new BinanceCoinData();
+                    bcd.price = coin.price;
+                    bcd.symbol = coin.symbol;
+                    bcd.tstamp = DateTime.Now;
+
+                    coinData.Add(bcd);
+                }
+
+                //keep it from growing too big
+                if (coinData.Count > 1000)
+                    coinData = coinData.Skip(1).ToList();
             }
 
-            //keep it from growing too big
-            if(coinData.Count > 1000)
-                coinData = coinData.Skip(1).ToList();
+            catch (HttpRequestException e)
+            {
+                logStatus("httpException: " + e.Message + "\n\n");
+                return;
+            }
 
+            catch (WebException e)
+            {
+                logStatus("webException: " + e.Message + "\n\n");
+                return;
+            }
+
+            catch (Exception e)
+            {
+                logStatus("exception: " + e.Message + "\n\n");
+                return;
+            }
+        }
+
+
+        private void logStatus(string msg)
+        {
+            if (statusLogEnabled)
+                txtStatus.Text += msg;
+
+            if (fileLogEnabled)
+                File.AppendAllText("log_" + DateTime.Today.ToString("d").Replace('/','_') + ".txt", msg);
         }
     }
 }
