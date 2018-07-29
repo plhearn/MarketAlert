@@ -115,8 +115,8 @@ namespace MarketAlert
 
 
             decimal percentChange = 0;
-                
-            if(startPrice > 0)
+
+            if (startPrice > 0)
                 percentChange = (curPrice - startPrice) / startPrice;
 
             lblMessage.Text = "percent change over " + minutes.ToString() + " minutes: " + (percentChange * 100);
@@ -137,7 +137,7 @@ namespace MarketAlert
                 coinData.Clear();
 
                 logStatus("\nPrice up at " + DateTime.Now.ToString() + ".  " + alertThreshold + " percent change within " + minutes + " minutes.\n\n");
-                logStatus("from " + Math.Round(startPrice) + " at " + startTime.ToString() + " \nto     " + Math.Round(curPrice) + " at " + DateTime.Now.ToString() + ".\n\n");
+                logStatus("from " + formatPrice(startPrice) + " at " + startTime.ToString() + " \nto     " + formatPrice(curPrice) + " at " + DateTime.Now.ToString() + ".\n\n");
             }
 
             if (percentChange < -alertThreshold / 100m)
@@ -147,7 +147,7 @@ namespace MarketAlert
                 coinData.Clear();
 
                 logStatus("\nPrice down at " + DateTime.Now.ToString() + ".  " + alertThreshold + " percent change within " + minutes + " minutes.\n\n");
-                logStatus("from " + Math.Round(startPrice) + " at " + startTime.ToString() + " \nto     " + Math.Round(curPrice) + " at " + DateTime.Now.ToString() + ".\n\n");
+                logStatus("from " + formatPrice(startPrice) + " at " + startTime.ToString() + " \nto     " + formatPrice(curPrice) + " at " + DateTime.Now.ToString() + ".\n\n");
             }
         }
 
@@ -163,6 +163,8 @@ namespace MarketAlert
 
                 if (coin.symbol.Contains("BTC"))
                 {
+                    lblCurrentPrice.Text = "Current Price: " + formatPrice(coin.price);
+
                     BinanceCoinData bcd = new BinanceCoinData();
                     bcd.price = coin.price;
                     bcd.symbol = coin.symbol;
@@ -203,6 +205,11 @@ namespace MarketAlert
 
             if (fileLogEnabled)
                 File.AppendAllText("log_" + DateTime.Today.ToString("d").Replace('/','_') + ".txt", msg);
+        }
+
+        public decimal formatPrice(decimal price)
+        {
+            return Math.Truncate(price * 100) / 100; //show 2 decimal places
         }
     }
 }
